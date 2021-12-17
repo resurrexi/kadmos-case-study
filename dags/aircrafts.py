@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
@@ -8,13 +8,15 @@ from airflow.providers.google.cloud.transfers.gcs_to_local import (
 from airflow.providers.google.cloud.transfers.local_to_gcs import (
     LocalFilesystemToGCSOperator,
 )
+from airflow.providers.google.cloud.operators.bigquery import (
+    BigQueryCreateExternalTableOperator,
+)
 
 
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "retries": 1,
-    "retry_delay": timedelta(minutes=5),
+    "retries": 0,
 }
 
 with DAG(
@@ -24,26 +26,41 @@ with DAG(
     schedule_interval="@once",
     catchup=False,
 ) as dag:
-    download_file = GCSToLocalFilesystemOperator(
+    download_csv = GCSToLocalFilesystemOperator(
         task_id="download_csv",
         object_name="aircrafts.csv",
         filename="{{ var.value.temp_dir }}/{{ run_id }}.csv",
         bucket="kadmos-data",
-        gcp_conn_id="gcs_data",  # configure via Admin > Connections
+        gcp_conn_id="gcs_data",  # configure
     )
-    process_file = BashOperator(
+    process_csv = BashOperator(
         task_id="process_csv",
         bash_command=(
             "python {{ var.value.scripts_dir }}/transform_aircrafts.py"
             " --filename {{ run_id }}.csv"
         ),
     )
-    upload_file = LocalFilesystemToGCSOperator(
+    upload_csv = LocalFilesystemToGCSOperator(
         task_id="upload_csv",
         src="{{ var.value.temp_dir}}/proc_{{ run_id }}.csv",
         dst="tables/aircrafts.csv",
         bucket="kadmos-data",
-        gcp_conn_id="gcs_data",  # configure via Admin > Connections
+        gcp_conn_id="gcs_data",  # configure
+    )
+    create_bq_table = BigQueryCreateExternalTableOperator(
+        task_id="create_bq_table",
+        bucket="kadmos-data",
+        source_objects=["tables/aircrafts.csv"],
+        destination_project_dataset_table="flights.aircrafts",
+        schema_fields=[
+            {"name": "aircraft_code", "type": "STRING"},
+            {"name": "model", "type": "STRING"},
+            {"name": "range", "type": "INT64"},
+        ],
+        source_format="CSV",
+        skip_leading_rows=1,
+        bigquery_conn_id="bq_owner",  # configure
+        google_cloud_storage_conn_id="gcs_data",  # configure
     )
 
-    download_file >> process_file >> upload_file
+    download_csv >> process_csv >> upload_csv >> create_bq_table
