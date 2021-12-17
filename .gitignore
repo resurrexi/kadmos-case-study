@@ -1,2 +1,5 @@
 logs/
+tmp/
+keys/
+venv/
 *.env

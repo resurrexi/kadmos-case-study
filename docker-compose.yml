@@ -17,6 +17,8 @@ services:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
+      - ./tmp:/opt/airflow/tmp
+      - ./keys:/opt/airflow/keys
     ports:
       - 8080:8080
     restart: always
@@ -32,6 +34,8 @@ services:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
+      - ./tmp:/opt/airflow/tmp
+      - ./keys:/opt/airflow/keys
     restart: always
     depends_on:
       - postgres
@@ -45,6 +49,8 @@ services:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
+      - ./tmp:/opt/airflow/tmp
+      - ./keys:/opt/airflow/keys
     restart: always
     depends_on:
       - postgres
@@ -114,8 +120,8 @@ services:
           echo "   https://airflow.apache.org/docs/apache-airflow/stable/start/docker.html#before-you-begin"
           echo
         fi
-        mkdir -p /sources/logs /sources/dags /sources/plugins
-        chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
+        mkdir -p /sources/logs /sources/tmp
+        chown -R "${AIRFLOW_UID}:0" /sources/{logs,tmp}
         exec /entrypoint airflow version
     # yamllint enable rule:line-length
     environment:
