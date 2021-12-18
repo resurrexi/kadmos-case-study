@@ -8,19 +8,17 @@ from airflow.providers.google.cloud.transfers.gcs_to_bigquery import (
     GCSToBigQueryOperator,
 )
 
-default_args = {"owner": "airflow", "depends_on_past": False, "retries": 0}
+default_args = {
+    "owner": "airflow",
+    "depends_on_past": False,
+    "retries": 0,
+}
 
 extract_sql = """
-SELECT airport_code,
-    airport_name->>'en' AS name_en,
-    airport_name->>'ru' AS name_ru,
-    city->>'en' AS city_en,
-    city->>'ru' AS city_ru,
-    coordinates[0] AS coordinates_x,
-    coordinates[1] AS coordinates_y,
-    timezone
+SELECT *
 FROM airports_data
 """
+
 # https://cloud.google.com/sql/docs/mysql/admin-api/rest/v1beta4/operations#ExportContext
 export_body = {
     "exportContext": {
@@ -51,12 +49,9 @@ with DAG(
         destination_project_dataset_table="flights.airports",
         schema_fields=[
             {"name": "airport_code", "type": "STRING"},
-            {"name": "airport_name_en", "type": "STRING"},
-            {"name": "airport_name_ru", "type": "STRING"},
-            {"name": "city_en", "type": "STRING"},
-            {"name": "city_ru", "type": "STRING"},
-            {"name": "coordinates_x", "type": "FLOAT64"},
-            {"name": "coordinates_y", "type": "FLOAT64"},
+            {"name": "airport_name", "type": "STRING"},
+            {"name": "city", "type": "STRING"},
+            {"name": "coordinates", "type": "STRING"},
             {"name": "timezone", "type": "STRING"},
         ],
         source_format="CSV",
